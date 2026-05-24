@@ -11,6 +11,7 @@ import {
   updateQuestion,
   bulkCreateQuestions,
   getTeacherExamResults,
+  importQuestionsFile,
 } from "../services/teacher/exams.service";
 
 interface UseTeacherExamsParams {

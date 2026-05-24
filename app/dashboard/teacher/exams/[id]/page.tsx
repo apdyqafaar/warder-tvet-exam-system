@@ -120,7 +120,7 @@ const handleImportSubmit = async () => {
       return
     }
 
-    const res = await importQuestionsMutation.mutateAsync(formData)
+    const res:any = await importQuestionsMutation.mutateAsync(formData)
     if (res.success && res.data && res.data.length > 0) {
       setImportedQuestions(res.data)
       setImportStep("review")
@@ -183,7 +183,7 @@ const updateImportedQuestionAnswer = (index: number, answer: "A" | "B" | "C" | "
     )
   }
 
-  const exam = examData
+  const exam = examData as any
   const questions = exam.questions || []
 
   // Check if dates allow publishing
@@ -614,7 +614,7 @@ const updateImportedQuestionAnswer = (index: number, answer: "A" | "B" | "C" | "
             </Card>
           ) : (
             <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
-              {questions.map((q, idx: number) => (
+              {questions.map((q: any, idx: number) => (
                 <Card
                   key={q.id}
                   className="shadow-sm border-border/60 hover:border-primary/20 transition-all duration-300 relative overflow-hidden group/item bg-card/60 backdrop-blur-xs"
