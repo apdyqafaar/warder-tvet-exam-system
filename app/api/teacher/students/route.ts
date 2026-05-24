@@ -125,6 +125,10 @@ export async function GET(req: Request) {
             ? sortOrder === "asc"
               ? sql`${averageScoreSql} asc`
               : sql`${averageScoreSql} desc`
+            : sortBy === "passedExamsCount"
+            ? sortOrder === "asc"
+              ? sql`cast(count(case when ${studentExam.isCompleted} = true and ${studentExam.status} = 'passed' then 1 end) as int) asc`
+              : sql`cast(count(case when ${studentExam.isCompleted} = true and ${studentExam.status} = 'passed' then 1 end) as int) desc`
             : sortOrder === "asc"
               ? asc(student.createdAt)
               : desc(student.createdAt);
@@ -137,6 +141,7 @@ export async function GET(req: Request) {
         departmentId: student.departmentId,
         createdAt: student.createdAt,
         totalExams: totalExamsSql,
+        passedExamsCount: sql<number>`cast(count(case when ${studentExam.isCompleted} = true and ${studentExam.status} = 'passed' then 1 end) as int)`,
         completedExams: completedExamsSql,
         averageScore: sql<number>`cast(avg(case when ${studentExam.isCompleted} = true then ${studentExam.score} end) as decimal(10,2))`,
       })

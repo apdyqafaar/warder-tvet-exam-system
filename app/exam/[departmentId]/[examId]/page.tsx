@@ -380,117 +380,242 @@ export default function TakeExamPage() {
   if (examSession?.isCompleted) {
     const score = examSession.score || 0;
     const totalQ = questions.length || exam.totalQuestions;
-    const percent = Math.min(
-      100,
-      Math.round((score / Math.max(1, totalQ)) * 100),
-    );
+    const wrongAnswers = answers.filter((a) => a.isCorrect === false).length;
+    const unanswered = Math.max(0, totalQ - answers.filter((a) => a.selectedAnswer).length);
+    const percent = Math.min(100, Math.round((score / Math.max(1, totalQ)) * 100));
+    const passed = examSession.status === "passed" || percent >= 50;
+    const passThreshold = 50;
+
+    // Bar chart max bar height in px
+    const maxBarH = 120;
+    const barMax = Math.max(score, wrongAnswers, unanswered, 1);
+
+    const submittedDate = examSession.submittedAt
+      ? new Date(examSession.submittedAt)
+      : new Date();
+    const startedDate = examSession.startedAt
+      ? new Date(examSession.startedAt)
+      : null;
+    const timeTakenMin = startedDate
+      ? Math.round((submittedDate.getTime() - startedDate.getTime()) / 60000)
+      : null;
 
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col justify-between">
-        <div className="container mx-auto px-4 py-20 flex-grow max-w-xl flex flex-col justify-center">
-          <Card className=" shadow-lg p-8 text-center space-y-8 rounded-xl">
-            {/* Header Trophy */}
-            <div className="space-y-3">
-              <div className="inline-flex p-4 rounded-full bg-primary/10 text-primary shadow-inner">
-                <Trophy className="w-10 h-10" />
-              </div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-                {percent > 75 ? "Congratulations!" : "Keep it up"}
-              </h1>
-              <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-                Excellent effort. Your answers have been successfully locked and
-                scored on our secure databases.
+      <div className="min-h-screen bg-background text-foreground flex flex-col">
+        {/* Top header bar */}
+        <header className="border-b bg-card py-4 px-6 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <GraduationCap className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-foreground">{exam.title}</p>
+            <p className="text-xs text-muted-foreground">Exam Results</p>
+          </div>
+        </header>
+
+        <main className="flex-grow container mx-auto px-4 py-10 max-w-3xl space-y-6">
+
+          {/* ── PASS / FAIL BANNER ── */}
+          <div
+            className={`rounded-2xl border-2 p-6 flex flex-col sm:flex-row items-center gap-5 shadow-sm ${
+              passed
+                ? "border-emerald-500 bg-emerald-500/5"
+                : "border-destructive bg-destructive/5"
+            }`}
+          >
+            <div
+              className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-3xl font-black shadow-inner ${
+                passed
+                  ? "bg-emerald-500/10 text-emerald-500"
+                  : "bg-destructive/10 text-destructive"
+              }`}
+            >
+              {passed ? "✓" : "✗"}
+            </div>
+            <div className="text-center sm:text-left">
+              <p
+                className={`text-2xl font-extrabold tracking-tight ${
+                  passed ? "text-emerald-500" : "text-destructive"
+                }`}
+              >
+                {passed ? "You Passed!" : "You Did Not Pass"}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {passed
+                  ? `Great job, ${student?.fullName?.split(" ")[0]}! You scored ${percent}% and met the passing threshold of ${passThreshold}%.`
+                  : `Don't give up, ${student?.fullName?.split(" ")[0]}. You scored ${percent}%, which is below the required ${passThreshold}%. Keep studying!`}
               </p>
             </div>
+            <div className="ml-auto shrink-0 text-center hidden sm:block">
+              <p className={`text-4xl font-black ${passed ? "text-emerald-500" : "text-destructive"}`}>
+                {percent}%
+              </p>
+              <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold mt-0.5">
+                Final Score
+              </p>
+            </div>
+          </div>
 
-            {/* Interactive Scoring Gauge */}
-            <div className="relative flex items-center justify-center">
-              <div className="w-48 h-48 rounded-full border-8 border-muted flex flex-col items-center justify-center p-4 relative bg-background shadow-inner">
-                <span className="text-4xl font-extrabold text-foreground">
-                  {percent}%
-                </span>
-                <span className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider mt-1">
-                  Graded Score
-                </span>
+          {/* ── TWO-COLUMN: Gauge + Stats ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
-                {/* Absolute outer dynamic border */}
-                <svg
-                  viewBox="0 0 200 200"
-                  className="absolute inset-0 h-full w-full -rotate-90"
-                >
-                  {/* Background */}
+            {/* Circular score gauge */}
+            <Card className="p-6 flex flex-col items-center justify-center gap-4 rounded-2xl shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Score Gauge
+              </p>
+              <div className="relative w-40 h-40 flex items-center justify-center">
+                <svg viewBox="0 0 200 200" className="absolute inset-0 w-full h-full -rotate-90">
+                  <circle cx="100" cy="100" r="80" className="fill-none stroke-muted/20" strokeWidth="14" />
                   <circle
-                    cx="100"
-                    cy="100"
-                    r="85"
-                    className="fill-none stroke-muted/20"
-                    strokeWidth="10"
-                  />
-
-                  {/* Progress */}
-                  <circle
-                    cx="100"
-                    cy="100"
-                    r="85"
-                    className="fill-none stroke-primary transition-all duration-700"
-                    strokeWidth="10"
+                    cx="100" cy="100" r="80"
+                    className={`fill-none transition-all duration-700 ${passed ? "stroke-emerald-500" : "stroke-destructive"}`}
+                    strokeWidth="14"
                     strokeLinecap="round"
-                    strokeDasharray="534"
-                    strokeDashoffset={534 - (534 * percent) / 100}
+                    strokeDasharray="503"
+                    strokeDashoffset={503 - (503 * percent) / 100}
                   />
                 </svg>
+                <div className="flex flex-col items-center z-10">
+                  <span className="text-3xl font-extrabold text-foreground">{percent}%</span>
+                  <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Score</span>
+                </div>
+              </div>
+              <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold border ${
+                passed
+                  ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  : "border-destructive bg-destructive/10 text-destructive"
+              }`}>
+                {passed ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                {passed ? "PASSED" : "NOT PASSED"}
+              </div>
+            </Card>
+
+            {/* Quick stats */}
+            <Card className="p-6 rounded-2xl shadow-sm space-y-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                Quick Stats
+              </p>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm text-muted-foreground">Total Questions</span>
+                <span className="font-bold text-foreground">{totalQ}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">✓ Correct</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">{score}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm text-destructive font-medium">✗ Wrong</span>
+                <span className="font-bold text-destructive">{wrongAnswers}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm text-amber-600 dark:text-amber-400 font-medium">— Unanswered</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400">{unanswered}</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm text-muted-foreground">Pass Threshold</span>
+                <span className="font-bold text-foreground">{passThreshold}%</span>
+              </div>
+            </Card>
+          </div>
+
+          {/* ── BAR CHART ── */}
+          <Card className="p-6 rounded-2xl shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-6">
+              Answer Breakdown — Visual Chart
+            </p>
+            <div className="flex items-end justify-center gap-8 sm:gap-16" style={{ height: `${maxBarH + 40}px` }}>
+              {/* Correct bar */}
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">{score}</span>
+                <div
+                  className="w-14 sm:w-20 rounded-t-lg bg-emerald-500 transition-all duration-700 shadow-sm"
+                  style={{ height: `${Math.round((score / barMax) * maxBarH)}px` }}
+                />
+                <span className="text-xs font-semibold text-muted-foreground">Correct</span>
+              </div>
+              {/* Wrong bar */}
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-sm font-black text-destructive">{wrongAnswers}</span>
+                <div
+                  className="w-14 sm:w-20 rounded-t-lg bg-destructive transition-all duration-700 shadow-sm"
+                  style={{ height: `${Math.round((wrongAnswers / barMax) * maxBarH)}px` }}
+                />
+                <span className="text-xs font-semibold text-muted-foreground">Wrong</span>
+              </div>
+              {/* Unanswered bar */}
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-sm font-black text-amber-600 dark:text-amber-400">{unanswered}</span>
+                <div
+                  className="w-14 sm:w-20 rounded-t-lg bg-amber-400 transition-all duration-700 shadow-sm"
+                  style={{ height: `${Math.max(4, Math.round((unanswered / barMax) * maxBarH))}px` }}
+                />
+                <span className="text-xs font-semibold text-muted-foreground">Unanswered</span>
               </div>
             </div>
-
-            {/* Detailed scorecard list */}
-            <div className="bg-background border rounded-lg p-5 space-y-3 text-left text-sm text-muted-foreground">
-              <div className="flex justify-between items-center pb-2 border-b">
-                <span>Student Name:</span>
-                <span className="font-bold text-foreground">
-                  {student?.fullName}
-                </span>
-              </div>
-              <div className="flex justify-between items-center pb-2 border-b">
-                <span>Student ID:</span>
-                <span className="font-mono text-foreground">
-                  {student?.studentNumber}
-                </span>
-              </div>
-              <div className="flex justify-between items-center pb-2 border-b">
-                <span>Correct Answers:</span>
-                <span className="font-bold text-foreground">
-                  {score} of {totalQ}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Submission Date:</span>
-                <span className="text-foreground">
-                  {examSession.submittedAt
-                    ? new Date(examSession.submittedAt).toLocaleTimeString()
-                    : new Date().toLocaleTimeString()}
-                </span>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="pt-2">
-              <Button
-                onClick={() =>
-                  router.replace(`/exam/onboard-examinees/${departmentId}`)
-                }
-                className="w-full bg-primary hover:bg-primary/95 text-primary-foreground font-semibold py-6 rounded-lg flex items-center justify-center gap-2 transition"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Return to Dashboard
-              </Button>
+            {/* Legend */}
+            <div className="flex items-center justify-center gap-6 mt-5 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-500 inline-block" />Correct</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-destructive inline-block" />Wrong</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-400 inline-block" />Unanswered</span>
             </div>
           </Card>
-        </div>
 
-        <footer className="w-full border-t bg-card py-6 text-center text-muted-foreground text-xs">
-          <span>
-            Wardheer TVET Student Examination Hub © {new Date().getFullYear()}
-          </span>
+          {/* ── STUDENT INFO ── */}
+          <Card className="p-6 rounded-2xl shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">
+              Student Information
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-xs">Full Name</p>
+                <p className="font-bold text-foreground">{student?.fullName}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-xs">Student ID</p>
+                <p className="font-mono font-bold text-foreground">{student?.studentNumber}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-xs">Submitted At</p>
+                <p className="font-bold text-foreground">
+                  {submittedDate.toLocaleDateString()} — {submittedDate.toLocaleTimeString()}
+                </p>
+              </div>
+              {timeTakenMin !== null && (
+                <div className="space-y-1">
+                  <p className="text-muted-foreground text-xs">Time Taken</p>
+                  <p className="font-bold text-foreground">
+                    {timeTakenMin >= 60
+                      ? `${Math.floor(timeTakenMin / 60)}h ${timeTakenMin % 60}m`
+                      : `${timeTakenMin} min`}
+                  </p>
+                </div>
+              )}
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-xs">Exam Title</p>
+                <p className="font-bold text-foreground">{exam.title}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-xs">Result Status</p>
+                <p className={`font-extrabold text-base ${passed ? "text-emerald-500" : "text-destructive"}`}>
+                  {passed ? "✓ PASSED" : "✗ NOT PASSED"}
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* ── ACTION BUTTON ── */}
+          <Button
+            onClick={() => router.replace(`/exam/onboard-examinees/${departmentId}`)}
+            className="w-full bg-primary hover:bg-primary/95 text-primary-foreground font-semibold py-6 rounded-xl flex items-center justify-center gap-2 transition text-base"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Return to Dashboard
+          </Button>
+        </main>
+
+        <footer className="w-full border-t bg-card py-5 text-center text-muted-foreground text-xs">
+          Wardheer TVET Student Examination Hub © {new Date().getFullYear()}
         </footer>
       </div>
     );

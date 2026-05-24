@@ -24,6 +24,9 @@ export async function GET(
           orderBy: (questions, { asc }) => [asc(questions.createdAt)],
         },
         department: true,
+        studentExams: {
+          columns: { isCompleted: true }
+        }
       },
     });
 

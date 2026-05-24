@@ -16,6 +16,9 @@ import {
   Sparkles,
   Layers,
   Edit2,
+  Upload,
+  X,
+  Users,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -53,7 +56,10 @@ import {
   useCreateQuestion,
   useDeleteQuestion,
   useUpdateQuestion,
+  useImportQuestionsFile,
+  useBulkCreateQuestions,
 } from "@/lib/hooks/use-teacher-exams"
+import { ParsedQuestion } from "@/lib/utils/question-parser"
 import { toast } from "sonner"
 interface IQuestion{
     id: string;
@@ -92,6 +98,61 @@ export default function ExamDetailPage() {
 const [editMode, setEditMode]=useState(false)
 const [questionToEdit, setQuestionToEdit]=useState<IQuestion|null>(null)
 
+// Import state
+const [showImportModal, setShowImportModal] = useState(false)
+const [importFile, setImportFile] = useState<File | null>(null)
+const [importText, setImportText] = useState("")
+const [importedQuestions, setImportedQuestions] = useState<ParsedQuestion[]>([])
+const [importStep, setImportStep] = useState<"upload" | "review">("upload")
+
+const importQuestionsMutation = useImportQuestionsFile(id)
+const bulkCreateQuestionsMutation = useBulkCreateQuestions(id)
+
+const handleImportSubmit = async () => {
+  try {
+    const formData = new FormData()
+    if (importFile) {
+      formData.append("file", importFile)
+    } else if (importText.trim()) {
+      formData.append("text", importText)
+    } else {
+      toast.error("Please provide a file or text")
+      return
+    }
+
+    const res = await importQuestionsMutation.mutateAsync(formData)
+    if (res.success && res.data && res.data.length > 0) {
+      setImportedQuestions(res.data)
+      setImportStep("review")
+      toast.success(res.message)
+    } else {
+      toast.error(res.message || "Failed to parse questions")
+    }
+  } catch (error: any) {
+    toast.error(error.message || "Failed to import questions")
+  }
+}
+
+const handleBulkSubmit = async () => {
+  try {
+    await bulkCreateQuestionsMutation.mutateAsync(importedQuestions)
+    toast.success("Questions added successfully")
+    setShowImportModal(false)
+    setImportStep("upload")
+    setImportedQuestions([])
+    setImportFile(null)
+    setImportText("")
+    refetch()
+  } catch (error: any) {
+    toast.error(error.message || "Failed to save questions")
+  }
+}
+
+const updateImportedQuestionAnswer = (index: number, answer: "A" | "B" | "C" | "D") => {
+  const newQuestions = [...importedQuestions]
+  newQuestions[index].correctAnswer = answer
+  setImportedQuestions(newQuestions)
+}
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
@@ -151,8 +212,21 @@ const [questionToEdit, setQuestionToEdit]=useState<IQuestion|null>(null)
   const handleAddQuestion = async (e: React.FormEvent) => {
     e.preventDefault()
       if(editMode){
-        await handleUpdate()
-           toast.success("Question updated successfully")
+        try {
+          await handleUpdate()
+          toast.success("Question updated successfully")
+          setEditMode(false)
+          setQuestionToEdit(null)
+          setQuestionText("")
+          setOptionA("")
+          setOptionB("")
+          setOptionC("")
+          setOptionD("")
+          setCorrectAnswer("A")
+          setErrors({})
+        } catch (err: any) {
+          toast.error(err.message || "Failed to update question")
+        }
         return
       }
     if (!validateForm()) {
@@ -236,10 +310,16 @@ const [questionToEdit, setQuestionToEdit]=useState<IQuestion|null>(null)
           </Button>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground font-medium bg-muted px-2.5 py-1 rounded-full border">
             Created: {new Date(exam.createdAt).toLocaleDateString()}
           </span>
+          <Link href={`/dashboard/teacher/exams/${id}/results`}>
+            <Button size="sm" variant="default" className="gap-2 shadow-sm font-semibold">
+              <Users className="h-4 w-4" />
+              View Results
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -261,6 +341,10 @@ const [questionToEdit, setQuestionToEdit]=useState<IQuestion|null>(null)
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
                 <Layers className="h-3.5 w-3.5" />
                 {questions.length} {questions.length === 1 ? "Question" : "Questions"}
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400">
+                <Users className="h-3.5 w-3.5" />
+                {exam.studentExams?.length || 0} {(exam.studentExams?.length || 0) === 1 ? "Student Taken" : "Students Taken"}
               </span>
             </div>
 
@@ -479,10 +563,10 @@ const [questionToEdit, setQuestionToEdit]=useState<IQuestion|null>(null)
                 <Button
                 variant={"default"}
                   type="submit"
-                  disabled={updateExamMutation.isLoading ||createQuestionMutation.isLoading}
+                  disabled={updateExamMutation.isLoading || createQuestionMutation.isLoading || updateQuestionMutation.isLoading || updateQuestionMutation.isPending}
                   className="w-full h-11  text-primary-foreground font-semibold shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4"
                 >
-                  {updateExamMutation.isPending ||createQuestionMutation.isLoading ? (
+                  {updateExamMutation.isPending || createQuestionMutation.isLoading || updateQuestionMutation.isLoading || updateQuestionMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
                       {editMode? "Updating the Question":"Saving Question..."}
@@ -506,8 +590,13 @@ const [questionToEdit, setQuestionToEdit]=useState<IQuestion|null>(null)
               <h3 className="text-lg font-bold tracking-tight">Exam Questions</h3>
               <p className="text-xs text-muted-foreground">List of current questions configured for this exam.</p>
             </div>
-            <div className="h-7 px-3 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold flex items-center justify-center shadow-2xs">
-              {questions.length} total
+            <div className="flex gap-2 items-center">
+              <Button variant="outline" size="sm" onClick={() => setShowImportModal(true)} className="h-7 text-xs">
+                <Upload className="h-3.5 w-3.5 mr-1.5" /> Import
+              </Button>
+              <div className="h-7 px-3 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold flex items-center justify-center shadow-2xs">
+                {questions.length} total
+              </div>
             </div>
           </div>
 
@@ -631,6 +720,118 @@ const [questionToEdit, setQuestionToEdit]=useState<IQuestion|null>(null)
           )}
         </div>
       </div>
+
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-card w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl border shadow-xl flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b">
+              <div>
+                <h2 className="text-xl font-bold">Import Questions</h2>
+                <p className="text-sm text-muted-foreground">Upload a PDF/Word file or paste text directly.</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => { setShowImportModal(false); setImportStep("upload"); setImportedQuestions([]); }}>
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            
+            <div className="p-6 flex-1 overflow-y-auto">
+              {importStep === "upload" ? (
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Label>Upload File (PDF or Word)</Label>
+                    <Input type="file" accept=".pdf,.docx,.txt" onChange={(e) => setImportFile(e.target.files?.[0] || null)} />
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="h-px bg-border flex-1"></div>
+                    <span className="text-xs text-muted-foreground uppercase font-bold">OR</span>
+                    <div className="h-px bg-border flex-1"></div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Paste Raw Text</Label>
+                    <Textarea 
+                      placeholder="1. What is...&#10; A. Option A&#10; B. Option B..." 
+                      className="min-h-[200px]"
+                      value={importText}
+                      onChange={(e) => setImportText(e.target.value)}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="bg-muted p-4 rounded-lg flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold">Review Questions</h3>
+                      <p className="text-sm text-muted-foreground">Please select the correct answers for each question before saving.</p>
+                    </div>
+                    <div className="text-sm font-bold text-primary">
+                      {importedQuestions.length} Questions Found
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    {importedQuestions.map((q, i) => (
+                      <Card key={i} className="p-4 shadow-sm border-border/60">
+                        <div className="space-y-4">
+                          <h4 className="font-medium text-sm"><span className="text-primary mr-2 font-bold">{i + 1}.</span>{q.questionText}</h4>
+                          <div className="grid grid-cols-2 gap-3 text-sm pl-6">
+                            <div className="flex gap-2"><strong>A.</strong> {q.optionA}</div>
+                            <div className="flex gap-2"><strong>B.</strong> {q.optionB}</div>
+                            <div className="flex gap-2"><strong>C.</strong> {q.optionC}</div>
+                            {q.optionD && <div className="flex gap-2"><strong>D.</strong> {q.optionD}</div>}
+                          </div>
+                          <div className="pt-2 pl-6">
+                            <Label className="text-xs mb-2 block text-muted-foreground">Select Correct Answer</Label>
+                            <div className="flex gap-2">
+                              {(["A", "B", "C", "D"] as const).map(opt => {
+                                if (opt === "D" && !q.optionD) return null;
+                                return (
+                                  <Button 
+                                    key={opt}
+                                    type="button"
+                                    size="sm"
+                                    variant={q.correctAnswer === opt ? "default" : "outline"}
+                                    onClick={() => updateImportedQuestionAnswer(i, opt)}
+                                    className={`w-10 h-8 p-0 ${q.correctAnswer === opt ? "bg-primary text-primary-foreground" : ""}`}
+                                  >
+                                    {opt}
+                                  </Button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t bg-muted/20 flex justify-end gap-3">
+              {importStep === "upload" ? (
+                <Button 
+                  disabled={(!importFile && !importText) || importQuestionsMutation.isLoading}
+                  onClick={handleImportSubmit}
+                >
+                  {importQuestionsMutation.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Parse Questions
+                </Button>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={() => setImportStep("upload")}>Back</Button>
+                  <Button 
+                    disabled={bulkCreateQuestionsMutation.isLoading}
+                    onClick={handleBulkSubmit}
+                  >
+                    {bulkCreateQuestionsMutation.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save {importedQuestions.length} Questions
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -323,6 +323,11 @@ export const studentExam = pgTable(
 
     isCompleted: boolean("is_completed").default(false).notNull(),
 
+    status: text("status")
+      .$type<"passed" | "failed" | "pending">()
+      .default("pending")
+      .notNull(),
+
     startedAt: timestamp("started_at"),
 
     submittedAt: timestamp("submitted_at"),

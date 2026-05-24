@@ -370,6 +370,9 @@ const StudentsPage = () => {
                 Completed
               </TableHead>
               <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <SortHead field="passedExamsCount" label="Passed Exams" />
+              </TableHead>
+              <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <SortHead field="averageScore" label="Avg. Score" />
               </TableHead>
               <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -448,12 +451,15 @@ const StudentsPage = () => {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <span className="inline-flex items-center gap-1 text-sm font-medium text-emerald-600">
+                    <span className="inline-flex items-center gap-1 text-sm font-medium">
                       {student.completedExams}
-                      <span className="text-xs text-muted-foreground font-normal">
-                        / {student.totalExams}
-                      </span>
                     </span>
+                    <span className="text-xs text-muted-foreground ml-2">
+                      / {student.totalExams}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {student.passedExamsCount ?? 0}
                   </TableCell>
                   <TableCell>
                     <ScorePill score={student.averageScore} />

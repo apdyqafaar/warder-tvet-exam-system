@@ -9,6 +9,8 @@ import {
   deleteQuestion,
   CreateQuestionInput,
   updateQuestion,
+  bulkCreateQuestions,
+  getTeacherExamResults,
 } from "../services/teacher/exams.service";
 
 interface UseTeacherExamsParams {
@@ -102,5 +104,30 @@ export const useUpdateQuestion = (examId: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries(["teacher-exam", examId]);
     },
+  });
+};
+
+export const useImportQuestionsFile = (examId: string) => {
+  return useMutation({
+    mutationFn: (formData: FormData) => importQuestionsFile(examId, formData),
+  });
+};
+
+export const useBulkCreateQuestions = (examId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (questions: CreateQuestionInput[]) => bulkCreateQuestions(examId, questions),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["teacher-exam", examId]);
+    },
+  });
+};
+
+export const useTeacherExamResults = (examId: string) => {
+  return useQuery({
+    queryKey: ["teacher-exam-results", examId],
+    queryFn: () => getTeacherExamResults(examId),
+    enabled: !!examId,
   });
 };

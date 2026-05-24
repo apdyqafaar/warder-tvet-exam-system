@@ -79,3 +79,28 @@ export const updateQuestion = async (examId: string, questionId: string, data: C
   return api.patch<{ success: boolean }>(`teacher/exams/${examId}/questions/${questionId}`, data);
 };
 
+export const importQuestionsFile = async (examId: string, formData: FormData) => {
+  // Use fetch directly for FormData since the api client might stringify it incorrectly
+  const response = await fetch(`/api/teacher/exams/${examId}/import`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to import questions");
+  }
+  return response.json();
+};
+
+export const bulkCreateQuestions = async (examId: string, questions: CreateQuestionInput[]) => {
+  return api.post<{ success: boolean; data: IQuestion[]; message: string }>(`teacher/exams/${examId}/questions/bulk`, { questions });
+};
+
+export interface ExamResultsResponse {
+  results: (import("@/lib/types/schema-types").IStudentExam & { student: import("@/lib/types/schema-types").IStudent })[];
+  exam: { id: string; title: string; totalQuestions: number };
+}
+
+export const getTeacherExamResults = async (examId: string) => {
+  return api.get<ExamResultsResponse>(`teacher/exams/${examId}/results`);
+};

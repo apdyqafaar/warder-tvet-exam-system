@@ -4,6 +4,7 @@ import type { IExam, IStudent, IStudentExam } from "@/lib/types/schema-types";
 export interface StudentWithStats extends IStudent {
   totalExams: number;
   completedExams: number;
+  passedExamsCount: number;
   averageScore: number | null;
 }
 

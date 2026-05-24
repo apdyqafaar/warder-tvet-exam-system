@@ -265,10 +265,22 @@ const StudentDetailSheet = ({ studentId, onOpenChange }: StudentDetailSheetProps
                       </TableCell>
                       <TableCell>
                         {se.isCompleted ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-500/10 rounded-full px-2 py-0.5 border border-emerald-500/20">
-                            <CheckCircle2 className="h-3 w-3" />
-                            Done
-                          </span>
+                          se.status === "passed" ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-500/10 rounded-full px-2 py-0.5 border border-emerald-500/20">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Passed
+                            </span>
+                          ) : se.status === "failed" ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive bg-destructive/10 rounded-full px-2 py-0.5 border border-destructive/20">
+                              <XCircle className="h-3 w-3" />
+                              Failed
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-500/10 rounded-full px-2 py-0.5 border border-emerald-500/20">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Done
+                            </span>
+                          )
                         ) : se.startedAt ? (
                           <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-500/10 rounded-full px-2 py-0.5 border border-amber-500/20">
                             <Clock className="h-3 w-3" />
@@ -287,9 +299,9 @@ const StudentDetailSheet = ({ studentId, onOpenChange }: StudentDetailSheetProps
                           total={se.exam.totalQuestions}
                         />
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                         {se.submittedAt
-                          ? new Date(se.submittedAt).toLocaleDateString()
+                          ? new Date(se.submittedAt).toLocaleString()
                           : "—"}
                       </TableCell>
                     </TableRow>

@@ -50,12 +50,16 @@ export async function POST(req: Request) {
 
       const correctAnswersCount = submittedAnswers.filter((a) => a.isCorrect).length;
 
+      const percentage = totalQuestions > 0 ? (correctAnswersCount / totalQuestions) * 100 : 0;
+      const status = percentage >= 55 ? "passed" : "failed";
+
       // Update studentExam status and score
       const [updatedSession] = await db
         .update(studentExam)
         .set({
           score: correctAnswersCount,
           isCompleted: true,
+          status: status,
           submittedAt: new Date(),
         })
         .where(eq(studentExam.id, studentExamId))
@@ -137,12 +141,16 @@ export async function POST(req: Request) {
       // Calculate results
       const correctAnswersCount = submittedAnswers.filter((a) => a.isCorrect).length;
 
+      const percentage = totalQuestions > 0 ? (correctAnswersCount / totalQuestions) * 100 : 0;
+      const status = percentage >= 55 ? "passed" : "failed";
+
       // Update studentExam status and score
       const [updatedSession] = await db
         .update(studentExam)
         .set({
           score: correctAnswersCount,
           isCompleted: true,
+          status: status,
           submittedAt: new Date(),
         })
         .where(eq(studentExam.id, studentExamId))
